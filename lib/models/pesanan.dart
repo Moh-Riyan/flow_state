@@ -7,12 +7,18 @@ class Pesanan {
   final int totalPembayaran;
   final String idPemesanan;
   final DateTime tanggalPemesanan;
+  // [TAMBAHAN] Properti untuk menyimpan jam mulai dan selesai
+  final String jamMulai;
+  final String jamSelesai;
 
   Pesanan({
     required this.lapangan,
     required this.totalPembayaran,
     required this.idPemesanan,
     required this.tanggalPemesanan,
+    // [TAMBAHAN] Update constructor
+    required this.jamMulai,
+    required this.jamSelesai,
   });
 
   factory Pesanan.fromJson(Map<String, dynamic> json) {
@@ -21,16 +27,21 @@ class Pesanan {
       totalPembayaran: json['totalPembayaran'],
       idPemesanan: json['idPemesanan'],
       tanggalPemesanan: DateTime.parse(json['tanggalPemesanan']),
+      // [TAMBAHAN] Mengambil data jam dari JSON, dengan nilai default jika null
+      jamMulai: json['jam_mulai'] ?? '00:00',
+      jamSelesai: json['jam_selesai'] ?? '00:00',
     );
   }
 
-  // Menambahkan metode toJson
   Map<String, dynamic> toJson() {
     return {
       'lapangan': lapangan.toJson(),
       'totalPembayaran': totalPembayaran,
       'idPemesanan': idPemesanan,
       'tanggalPemesanan': tanggalPemesanan.toIso8601String(),
+      // [TAMBAHAN] Menambahkan data jam ke JSON
+      'jam_mulai': jamMulai,
+      'jam_selesai': jamSelesai,
     };
   }
 
@@ -40,20 +51,15 @@ class Pesanan {
     String? jsonPesanan = prefs.getString('pesananAktif');
     List<Pesanan> daftarPesanan = [];
 
-    // Jika sudah ada pesanan sebelumnya, muat pesanan tersebut
     if (jsonPesanan != null) {
       List<dynamic> listPesanan = json.decode(jsonPesanan);
       daftarPesanan = listPesanan.map((item) => Pesanan.fromJson(item)).toList();
     }
 
-    // Tambahkan pesanan baru ke dalam daftar pesanan
     daftarPesanan.add(pesananBaru);
 
-    // Simpan kembali daftar pesanan ke SharedPreferences
     String jsonDaftarPesanan = json.encode(daftarPesanan.map((item) => item.toJson()).toList());
     await prefs.setString('pesananAktif', jsonDaftarPesanan);
-
-    // Debugging output untuk memeriksa apakah data disimpan dengan benar
     print("Menyimpan Pesanan Aktif: $jsonDaftarPesanan");
   }
 

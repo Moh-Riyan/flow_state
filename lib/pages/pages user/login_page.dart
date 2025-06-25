@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flow_state/pages/pages%20user/homepage.dart'; // Impor HomePage
 
 class LoginPage extends StatefulWidget {
   @override
@@ -13,13 +14,19 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  Future<void> _clearPaymentHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pesananAktif');
+    print("Riwayat pembayaran lokal telah dihapus untuk login baru.");
+  }
+
   void _submitLogin() async {
     final String email = _emailController.text.trim();
     final String password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Email dan Password kosong'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Email dan Password tidak boleh kosong'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -28,13 +35,8 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final response = await http.post(
         Uri.parse(apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
       );
 
       final Map<String, dynamic> responseBody = json.decode(response.body);
@@ -42,16 +44,11 @@ class _LoginPageState extends State<LoginPage> {
 
       if (status == 'success') {
         final accessToken = responseBody['access_token'];
-        // final userJson = responseBody['user']; // Removed unused variable
-
-        // Simpan token akses ke SharedPreferences
+        await _clearPaymentHistory();
         await _saveAccessToken(accessToken);
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Login berhasil!'), backgroundColor: Colors.green),
         );
-
-        // Pindah ke halaman beranda setelah login berhasil
         Navigator.pushReplacementNamed(context, '/beranda');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -67,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _saveAccessToken(String accessToken) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('access_token', accessToken); // Simpan token akses
+    await prefs.setString('access_token', accessToken);
   }
 
   @override
@@ -76,9 +73,17 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
+        // [MODIFIKASI] Aksi tombol kembali diubah
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Gunakan Navigator.pushReplacement untuk memastikan kembali ke HomePage
+            // Ini akan mengganti halaman login dengan HomePage, memberikan alur yang bersih
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomePage()),
+            );
+          },
         ),
       ),
       body: SingleChildScrollView(
@@ -95,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-            // Nama Field
+            // Email Field
             TextField(
               controller: _emailController,
               style: TextStyle(color: Colors.white),

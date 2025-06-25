@@ -1,3 +1,4 @@
+// (Salin semua import Anda di sini)
 import 'package:flow_state/models/lapangan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -5,10 +6,9 @@ import 'detail_pembayaran_qr.dart';
 import 'detail_pembayaran_fsmoney.dart';
 
 class PembayaranPage extends StatefulWidget {
-  // --- Terima data lapangan, total harga, dan ID Pemesanan ---
   final Lapangan lapangan;
   final int totalPrice;
-  final String idPemesanan; // <-- ID Pemesanan dari halaman sebelumnya
+  final String idPemesanan;
   final DateTime selectedDate;
   final List<TimeOfDay> selectedTimes;
 
@@ -16,7 +16,7 @@ class PembayaranPage extends StatefulWidget {
     super.key,
     required this.lapangan,
     required this.totalPrice,
-    required this.idPemesanan, // <-- Wajib ada
+    required this.idPemesanan,
     required this.selectedDate,
     required this.selectedTimes,
   });
@@ -27,8 +27,6 @@ class PembayaranPage extends StatefulWidget {
 
 class _PembayaranPageState extends State<PembayaranPage> {
   String? _selectedPaymentMethod = 'QRIS';
-  // State _isPaying tidak lagi diperlukan di sini karena tidak ada operasi async
-  // bool _isPaying = false;
 
   String formatCurrency(int amount) {
     final format = NumberFormat.currency(
@@ -39,7 +37,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
     return format.format(amount);
   }
 
-  // --- [DIUBAH] Fungsi ini sekarang hanya menangani navigasi ---
+  // [MODIFIKASI UTAMA] di fungsi _handleNavigation
   void _handleNavigation() {
     if (_selectedPaymentMethod == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,17 +46,18 @@ class _PembayaranPageState extends State<PembayaranPage> {
       return;
     }
 
-    // Panggilan API telah dipindahkan. Fungsi ini sekarang hanya untuk navigasi.
     if (_selectedPaymentMethod == 'FS Money') {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => DetailPembayaranFsmoney(
-            // [PENTING] Kirim semua data yang diperlukan ke halaman detail
             lapangan: widget.lapangan,
             idPemesanan: widget.idPemesanan,
             metodePembayaran: _selectedPaymentMethod!,
             totalPembayaran: widget.totalPrice,
+            // [TAMBAHAN] Kirim data tanggal dan waktu ke halaman detail pembayaran
+            selectedDate: widget.selectedDate,
+            selectedTimes: widget.selectedTimes,
           ),
         ),
       );
@@ -66,11 +65,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PembayaranDetailPage(
-            // Pastikan halaman PembayaranDetailPage juga siap menerima data ini jika perlu
-            // idPemesanan: widget.idPemesanan,
-            // totalPembayaran: widget.totalPrice,
-          ),
+          builder: (context) => PembayaranDetailPage(),
         ),
       );
     }
@@ -78,6 +73,8 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (Tidak ada perubahan di build method)
+    // ... (Salin seluruh build method Anda di sini)
     String checkInTime = formatTimeToIndonesiaWIB(widget.selectedTimes.first);
     String checkOutTime = widget.selectedTimes.length > 1 ? formatTimeToIndonesiaWIB(widget.selectedTimes.last) : '';
 
@@ -130,12 +127,12 @@ class _PembayaranPageState extends State<PembayaranPage> {
                       children: [
                         Text(
                           widget.lapangan.namaLapangan,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${widget.lapangan.lokasi} • ${DateFormat('EEEE, dd MMMM yy', 'id_ID').format(widget.selectedDate)}',
-                          style: const TextStyle(fontSize: 14, color: Colors.white70),
+                          style: const TextStyle(fontSize: 12, color: Colors.white70),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -146,7 +143,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                 const Text(
                                   'Check-in',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.orange,
                                   ),
@@ -155,7 +152,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                 Text(
                                   checkInTime,
                                   style: const TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -169,7 +166,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                 const Text(
                                   'Check-out',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.orange,
                                   ),
@@ -178,7 +175,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                 Text(
                                   checkOutTime,
                                   style: const TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -235,8 +232,104 @@ class _PembayaranPageState extends State<PembayaranPage> {
                     activeColor: Colors.orange,
                     controlAffinity: ListTileControlAffinity.trailing,
                   ),
+                 RadioListTile<String>(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Image.asset('assets/icons/gopay.png', width: 40, height: 40),
+                        SizedBox(width: 10),
+                        Text('GoPay', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    value: 'GoPay',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                    activeColor: Colors.orange,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                  ),
+                  RadioListTile<String>(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Image.asset('assets/icons/ovo.png', width: 40, height: 40),
+                        SizedBox(width: 10),
+                        Text('OVO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    value: 'OVO',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                    activeColor: Colors.orange,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                  ),
+                  RadioListTile<String>(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Image.asset('assets/icons/bca.png', width: 40, height: 40),
+                        SizedBox(width: 10),
+                        Text('BCA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    value: 'BCA',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                    activeColor: Colors.orange,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                  ),
+                  RadioListTile<String>(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Image.asset('assets/icons/mandiri.png', width: 40, height: 40),
+                        SizedBox(width: 10),
+                        Text('Mandiri', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    value: 'Mandiri',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                    activeColor: Colors.orange,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                  ),
+                  RadioListTile<String>(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Image.asset('assets/icons/bri.png', width: 40, height: 40),
+                        SizedBox(width: 10),
+                        Text('BRI', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    value: 'BRI',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                    activeColor: Colors.orange,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                  ),
                 ],
               ),
+
               const Divider(thickness: 1, color: Colors.white),
               const SizedBox(height: 20),
               const Text('Rincian Pembayaran', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -254,18 +347,18 @@ class _PembayaranPageState extends State<PembayaranPage> {
                   Text(formatCurrency(widget.totalPrice), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
               Center(
                 child: SizedBox(
-                  width: 300,
-                  height: 50,
+                  width: 250,
+                  height: 40,
                   child: ElevatedButton(
-                    onPressed: _handleNavigation, // [DIUBAH] Memanggil fungsi navigasi
+                    onPressed: _handleNavigation,
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         disabledBackgroundColor: Colors.orange.withOpacity(0.5)),
                     child: const Text(
-                      'Lanjutkan ke Pembayaran', // [DIUBAH] Teks tombol lebih jelas
+                      'Lanjut Pembayaran',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,

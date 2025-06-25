@@ -257,7 +257,7 @@ class _SelectScheduleState extends State<SelectSchedule> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
-                  padding: EdgeInsets.symmetric(horizontal: 80, vertical: 5),
+                  padding: EdgeInsets.symmetric(horizontal: 100, vertical: 5),
                 ),
                 child: Text(
                   'Pilih',

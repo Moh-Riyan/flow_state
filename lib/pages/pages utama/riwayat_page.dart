@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flow_state/models/pesanan.dart';
-import 'package:flow_state/models/lapangan.dart';
 
 class Riwayat extends StatefulWidget {
   @override
@@ -10,19 +9,64 @@ class Riwayat extends StatefulWidget {
 
 class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Pesanan> pesananAktif = [];
+  
+  List<Pesanan> _pesananAktif = [];
+  List<Pesanan> _daftarRiwayatPesanan = [];
+  
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadAndCategorizeOrders();
+  }
 
-    // Memuat pesanan aktif dari SharedPreferences
-    Pesanan.muatPesananAktif().then((pesananList) {
-      setState(() {
-        pesananAktif = pesananList;
-        print("Pesanan aktif dimuat: $pesananAktif");  // Output untuk debugging
-      });
+  Future<void> _loadAndCategorizeOrders() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    final allOrders = await Pesanan.muatPesananAktif();
+    final now = DateTime.now();
+
+    final active = <Pesanan>[];
+    final history = <Pesanan>[];
+
+    for (final pesanan in allOrders) {
+      try {
+        final timeParts = pesanan.jamSelesai.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+
+        final checkOutDateTime = DateTime(
+          pesanan.tanggalPemesanan.year,
+          pesanan.tanggalPemesanan.month,
+          pesanan.tanggalPemesanan.day,
+          hour,
+          minute,
+        );
+
+        if (now.isBefore(checkOutDateTime)) {
+          active.add(pesanan);
+        } else {
+          history.add(pesanan);
+        }
+      } catch (e) {
+        print('Error parsing waktu untuk pesanan ${pesanan.idPemesanan}: $e');
+        history.add(pesanan);
+      }
+    }
+    
+    active.sort((a, b) => b.tanggalPemesanan.compareTo(a.tanggalPemesanan));
+    history.sort((a, b) => b.tanggalPemesanan.compareTo(a.tanggalPemesanan));
+
+    if (!mounted) return;
+    setState(() {
+      _pesananAktif = active;
+      _daftarRiwayatPesanan = history;
+      _isLoading = false;
     });
   }
 
@@ -32,79 +76,86 @@ class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  // [MODIFIKASI UTAMA] Perubahan struktur UI pada method build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        automaticallyImplyLeading: false,
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(0),
-          child: Padding(
-            padding: EdgeInsets.only(top: 4.0),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.orange,
-              labelColor: Colors.orange,
-              unselectedLabelColor: Colors.white,
-              indicatorWeight: 3,
-              tabs: [
-                Tab(
-                  child: Text(
-                    'Pesanan Aktif',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      // AppBar dihapus untuk menaikkan posisi TabBar
+      body: SafeArea(
+        // SafeArea memastikan konten tidak terhalang oleh status bar atau notch
+        child: Column(
+          children: [
+            // TabBar sekarang menjadi bagian dari body
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.orange,
+                labelColor: Colors.orange,
+                unselectedLabelColor: Colors.white,
+                indicatorWeight: 3.0,
+                tabs: const [
+                  Tab(
+                    child: Text(
+                      'Pesanan Aktif',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
-                ),
-                Tab(
-                  child: Text(
-                    'Daftar Pesanan',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Tab(
+                    child: Text(
+                      'Daftar Pesanan',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            // Divider untuk memberikan garis pemisah visual (opsional)
+            Divider(color: Colors.grey[850], height: 1),
+            // TabBarView harus dibungkus dengan Expanded agar mengisi sisa ruang
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildPesananListView(_pesananAktif, 'Belum ada pesanan aktif.'),
+                  _buildPesananListView(_daftarRiwayatPesanan, 'Belum ada riwayat pesanan.'),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPesananAktif(),
-          _buildDaftarPesanan(),  // Tombol "Tambah Pesanan" sudah dihapus di sini
-        ],
       ),
     );
   }
 
-  Widget _buildPesananAktif() {
+  Widget _buildPesananListView(List<Pesanan> daftarPesanan, String emptyMessage) {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator(color: Colors.orange));
+    }
+
+    if (daftarPesanan.isEmpty) {
+      return Center(
+        child: Text(
+          emptyMessage,
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
+    
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount: pesananAktif.length,
+      itemCount: daftarPesanan.length,
       itemBuilder: (context, index) {
-        final pesanan = pesananAktif[index];
+        final pesanan = daftarPesanan[index];
         return _buildPesananCard(pesanan);
       },
     );
   }
 
-  // Hapus bagian yang berkaitan dengan tombol "Tambah Pesanan"
-  Widget _buildDaftarPesanan() {
-    return Center(
-      child: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: pesananAktif.length, // Menampilkan daftar pesanan aktif
-        itemBuilder: (context, index) {
-          final pesanan = pesananAktif[index];
-          return _buildPesananCard(pesanan);  // Menggunakan _buildPesananCard untuk menampilkan pesanan
-        },
-      ),
-    );
-  }
-
   Widget _buildPesananCard(Pesanan pesanan) {
-    final hargaFormat = NumberFormat("#,##0", "en_US");
-    final hargaInt = int.tryParse(pesanan.lapangan.hargaLapangan) ?? 0;
+    final hargaFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final String hargaTampil = hargaFormat.format(pesanan.totalPembayaran);
 
     return Card(
       color: Color(0xFF1C1C1E),
@@ -122,13 +173,13 @@ class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
               child: Image.network(
                 pesanan.lapangan.fullGambarUrl,
                 width: 100,
-                height: 100,
+                height: 120,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
                   return Container(
                     width: 100,
-                    height: 100,
+                    height: 120,
                     color: Colors.grey[800],
                     child: Center(child: CircularProgressIndicator(color: Colors.orange)),
                   );
@@ -136,7 +187,7 @@ class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     width: 100,
-                    height: 100,
+                    height: 120,
                     color: Colors.grey[800],
                     child: Icon(Icons.sports_soccer_rounded, color: Colors.white, size: 40),
                   );
@@ -152,54 +203,38 @@ class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
                     pesanan.lapangan.namaLapangan,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 6),
+                  SizedBox(height: 4),
+                  Text(
+                    DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(pesanan.tanggalPemesanan),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.star, color: Colors.orange, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        pesanan.lapangan.rating,
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                      SizedBox(width: 8),
-                      Text("•", style: TextStyle(color: Colors.white, fontSize: 14)),
-                      SizedBox(width: 8),
-                      Text(
-                        pesanan.lapangan.lokasi,
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
+                      _buildTimeInfo('Check-in', pesanan.jamMulai),
+                      SizedBox(width: 24),
+                      _buildTimeInfo('Check-out', pesanan.jamSelesai),
                     ],
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Mulai dari',
+                    'Total Pembayaran',
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        'Rp ${hargaFormat.format(hargaInt).replaceAll(',', '.')}',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '/jam',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    hargaTampil,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -207,6 +242,30 @@ class _RiwayatState extends State<Riwayat> with SingleTickerProviderStateMixin {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTimeInfo(String label, String time) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(height: 2),
+        Text(
+          time,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

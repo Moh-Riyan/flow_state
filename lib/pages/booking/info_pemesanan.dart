@@ -1,3 +1,4 @@
+// (Salin semua import Anda di sini)
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,7 +7,10 @@ import 'package:flow_state/models/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flow_state/pages/booking/pembayaran.dart';
+// Hapus import 'package:flow_state/models/pesanan.dart'; jika tidak digunakan lagi di sini
+// Namun, kita masih membutuhkannya untuk TimeOfDayExtension, jadi biarkan saja.
 import 'package:flow_state/models/pesanan.dart';
+
 
 class BookingInfoPage extends StatefulWidget {
   final Lapangan lapangan;
@@ -25,6 +29,7 @@ class BookingInfoPage extends StatefulWidget {
 }
 
 class _BookingInfoPageState extends State<BookingInfoPage> {
+  // ... (Tidak ada perubahan pada properti state)
   UserProfile? _userProfile;
   bool _isLoadingProfile = true;
   final TextEditingController _catatanController = TextEditingController();
@@ -41,9 +46,9 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
     _catatanController.dispose();
     super.dispose();
   }
-
+  
+  // Fungsi _fetchUserProfile tidak berubah
   Future<void> _fetchUserProfile() async {
-    // Tidak ada perubahan di fungsi ini
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? accessToken = prefs.getString('access_token');
@@ -56,7 +61,7 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
         Uri.parse('https://flowstate.my.id/api/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
-          'Accept': 'application/json', // Tambahan header untuk konsistensi
+          'Accept': 'application/json',
         },
       );
 
@@ -86,6 +91,8 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
     }
   }
 
+
+  // [MODIFIKASI UTAMA] di fungsi _kirimPemesanan
   Future<void> _kirimPemesanan() async {
     if (_userProfile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,30 +141,21 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
       try {
         responseBody = json.decode(response.body);
       } catch (e) {
-        print('Server response (bukan JSON): ${response.body}');
         throw Exception('Terjadi kesalahan pada server. Respons tidak valid.');
       }
 
-      print('RESPONS JSON DARI API PEMESANAN: $responseBody');
-
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
-          // Logika ekstraksi ID sudah benar sesuai referensi ('data' -> 'id_pemesanan')
           final String idPemesananDariApi = responseBody['data']?['id_pemesanan']?.toString() ?? '';
 
           if (idPemesananDariApi.isEmpty) {
             throw Exception('API berhasil, tetapi tidak mengembalikan ID Pemesanan.');
           }
 
-          // Simpan pesanan aktif
-          Pesanan.simpanPesananAktif(Pesanan(
-            lapangan: widget.lapangan,
-            totalPembayaran: totalPrice.toInt(),
-            idPemesanan: idPemesananDariApi,
-            tanggalPemesanan: widget.selectedDate,
-          ));
+          // [DIHAPUS] Logika penyimpanan ke SharedPreferences dihapus dari sini.
 
           if (mounted) {
+            // Langsung navigasi ke halaman pembayaran dengan semua data yang diperlukan
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -196,7 +194,9 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
     }
   }
   
-  String formatCurrency(int amount) {
+  // ... (Sisa kode seperti build, _buildProfileInfo, dll tidak berubah)
+  // ... (Salin sisa kode Anda di sini)
+    String formatCurrency(int amount) {
     final format = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -207,8 +207,6 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (Sisa kode Widget build tidak perlu diubah, sudah benar)
-    // Anda bisa copy-paste sisa kode Anda di sini.
     int durationInHours = 0;
     if (widget.selectedTimes.length >= 2) {
       widget.selectedTimes.sort((a, b) => a.compareTo(b));
@@ -282,8 +280,8 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Jadwal Pemesanan', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('Waktu Pemesanan', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text('Jadwal Pemesanan', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                        Text('Waktu Pemesanan', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -293,7 +291,7 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
                       children: [
                         Text(
                           DateFormat('EEEE, dd MMMM yy', 'id_ID').format(widget.selectedDate),
-                          style: const TextStyle(color: Colors.orange, fontSize: 14, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -304,7 +302,7 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
                                 if (widget.selectedTimes.length > 1)
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 4.0),
-                                    child: Text('–', style: TextStyle(color: Colors.orange, fontSize: 18)),
+                                    child: Text('–', style: TextStyle(color: Colors.orange, fontSize: 12)),
                                   ),
                                 if (widget.selectedTimes.length > 1) timeBox(formatTimeToIndonesiaWIB(widget.selectedTimes.last)),
                               ],
@@ -322,7 +320,7 @@ class _BookingInfoPageState extends State<BookingInfoPage> {
                     const Text('Informasi Pemesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 10),
                     _buildProfileInfo(),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
